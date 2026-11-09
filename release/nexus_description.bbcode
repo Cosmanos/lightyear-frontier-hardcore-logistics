@@ -1,0 +1,77 @@
+[Brief overview / summary field, under 350 characters]
+A reworked and rebalanced modded experience for players who like a planning challenge: less mech cargo, bigger deliveries, crop trampling, storage that only counts nearby, a Logistics Hub to link a base again, and paint-linked Drone Stations that carry items between bases. Per-world settings and its own playstyle card. Needs UE4SS.
+
+[Description field, Nexus BBCode, paste from the next line]
+[size=5][b]Hardcore Logistics[/b][/size]
+[i]A reworked and rebalanced modded experience for players who like a planning challenge.[/i]
+
+Lightyear Frontier makes moving things easy: the mech hauls a lot, every storage in a base counts everywhere, and deliveries ask for little. Hardcore Logistics turns that into a game of its own. Where you store things, how you move them and how you lay out your fields start to matter, and new buildings help you link it all back together as you progress.
+
+[size=4][b]What it changes[/b][/size]
+[list]
+[*][b]Mech cargo:[/b] the mech carries fewer large objects, so trailers become the way to move bulk cargo.
+[*][b]Deliveries:[/b] planet deliveries ask for real batches of components, so production matters.
+[*][b]Crop trampling:[/b] the mech crushes the crops it walks over. Fields need paths.
+[*][b]Local storage:[/b] only the storage near you counts for crafting, building and deliveries. Keep a depot next to the delivery cannon. To make up for it, storages hold twice as much.
+[/list]
+
+[size=4][b]New buildings[/b][/size]
+[list]
+[*][b]Logistics Hub[/b] (Milestone 10, with local storage on): links all storage in its Home Area again. Its own model, uses power.
+[*][b]Drone Stations[/b] (Milestone 8): a Drone Input Station and a Drone Output Station carry items between bases by drone, like an automation pipe without the pipe. Pipes fill the input station, and pipes take from the output station.
+[list]
+[*][b]Paint sets the channel:[/b] every input station sends to every output station painted the same colour. Unpainted stations share the Gray channel.
+[*]Each drone carries 50 kg per trip at 20 m/s, so farther stations are slower. It only flies while your power grid is energized.
+[/list]
+[*][b]Workshop Shed[/b] (Milestone 1): the game's cut Workshop Shed, buildable again for your first machines.
+[/list]
+Buildings you have already earned unlock when your world loads, so the mod works with existing saves.
+
+[size=4][b]How to play[/b][/size]
+[list]
+[*][b]New world:[/b] pick the [b]Hardcore Logistics[/b] card on the new-game screen (after Challenging). It starts from Challenging and turns every part of the mod on.
+[*][b]Any world:[/b] in Settings, the rows starting [b]Hardcore Logistics:[/b] turn each part on or off for that world. Some changes need a save and reload; the menu tells you when.
+[*]Worlds you already have start with the mod's settings off.
+[/list]
+
+[size=4][b]Requirements[/b][/size]
+[list]
+[*]Lightyear Frontier 1.0 on Steam (version 1.0.2563).
+[*][url=https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/v3.0.1]UE4SS v3.0.1[/url], installed into [i]FarMech\Binaries\Win64[/i].
+[/list]
+
+[size=4][b]Installation[/b][/size]
+[list=1]
+[*]Install UE4SS v3.0.1 if you haven't yet.
+[*]Close the game.
+[*]Extract the zip into the game's install folder, the one that holds the [i]FarMech[/i] folder (Steam: right-click the game, Manage, Browse local files).
+[*]Start the game.
+[/list]
+The zip adds [i]FarMech\Content\Paks\~mods\HardcoreLogisticsBuildings_P[/i] (.pak, .utoc, .ucas) and [i]FarMech\Binaries\Win64\ue4ss\Mods\HardcoreLogistics[/i]. No other files are changed.
+
+[size=4][b]Uninstallation[/b][/size]
+[list]
+[*]First recycle every Logistics Hub and Drone Station, and back up your save ([i]%LOCALAPPDATA%\FarMech\Saved\SaveGames[/i]). What the game does with them once their files are gone has not been tested.
+[*]Then delete the two items listed above.
+[*]Everything else returns to normal: the mod's settings and numbers are not saved into your world, and storages that are fuller than normal keep their items.
+[/list]
+
+[size=4][b]Compatibility and known issues[/b][/size]
+[list]
+[*]After a game update, remove the mod until it is updated: it carries copies of some game tables (buildings, milestones, energy) made for version 1.0.2563.
+[*]Other mods that replace DT_Constructs, DT_DeliveryMilestones or DT_EnergyValues conflict with this one.
+[*]Co-op has not been tested.
+[/list]
+
+[size=4][b]Console[/b][/size]
+Open the console with ~ or F10. [b]hardcore[/b] shows the status. [b]hardcore check[/b], [b]hardcore storages[/b], [b]hardcore hub[/b] and [b]hardcore drones[/b] show details. UE4SS's log ([i]ue4ss\UE4SS.log[/i]) has every line from the mod, starting with [HardcoreLogistics].
+
+[size=4][b]Credits[/b][/size]
+[list]
+[*]UE4SS by the UE4SS team.
+[*]retoc by trumank, used to build the new buildings.
+[*]The Workshop Shed idea is shared with [EDIT BEFORE POSTING: name and link of the Workshop Shed mod you credit].
+[/list]
+
+[size=4][b]Source[/b][/size]
+The full source, build tools and models are on [url=https://github.com/Cosmanos/lightyear-frontier-hardcore-logistics]GitHub[/url] (MIT license).

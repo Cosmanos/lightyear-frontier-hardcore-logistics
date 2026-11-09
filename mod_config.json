@@ -1,0 +1,213 @@
+{
+  "mod_name": "HardcoreLogistics",
+  "version": "0.15.6",
+  "_version_note": "The released version (Nexus, the release zip's name, the runtime's load line in UE4SS.log). 0.15.6 is the first public release (2026-11-09); the changelog's 0.x entries before it are the development log.",
+  "features": {
+    "_note": "Each feature is one Off / On row in the game's playstyle settings (new-game Customize screen and the in-game Settings menu), stored per world in worlds.txt. The label is the row's text; every label starts \"Hardcore Logistics:\" so the rows read as the mod's (the user's wish, 0.15.6). Every table below belongs to exactly one feature, and applies just before a world loads. A live feature is a script that switches on and off at once, without a reload; it can also own tables (local storage owns the storage sizes), which after a switch in a loaded world follow on the next load. The static pak (build / install) ignores features and changes every table.",
+    "cargo":      { "label": "Hardcore Logistics: Mech Cargo", "tables": ["DT_Modules", "DT_CoreUpgrades"] },
+    "deliveries": { "label": "Hardcore Logistics: Deliveries", "tables": ["DT_Deliveries"] },
+    "trampling":  { "label": "Hardcore Logistics: Crop Trampling", "tables": [], "live": true },
+    "storage":    { "label": "Hardcore Logistics: Local Storage", "tables": ["DT_StorageCapacities"], "live": true }
+  },
+  "mode": {
+    "_note": "The extra playstyle card on the new-game screen. Picking it applies the game's base preset (Challenge = the Challenging card) and switches every feature on for the new world; picking another card switches them off. The card uses the hidden Custom card's artwork.",
+    "title": "Hardcore Logistics",
+    "description": "A reworked and rebalanced modded experience for players who like a planning challenge.",
+    "_description_note": "In the voice of the game's own cards (Challenging: \"For those seeking a challenge. Damage is increased, items are permanently lost on knockout, and fuel is more scarce.\"; Relaxed: \"A low-pressure experience for those who want to take their time.\"), at the user's request (0.15.5): no list of the changes (the README lists them). The user's pick from four drafts built on their own line, \"Reworked and rebalanced modded experience for players who like planning challenges\"; a first draft (\"For seasoned pioneers who want the frontier to push back...\") did not land.",
+    "base_preset": "Challenge"
+  },
+  "trampling": {
+    "_note": "Crop trampling (feature 'trampling', script trample.lua). A planted crop dies when the mech's body passes over it; the mound stays, empty (its mulch, fertilizer and water start fresh). Only the mech's own body counts, in every mode; tractor attachments do not. In car and tractor mode the body is the box around the vehicle's wheels (read from the game). radius_cm: on legs, how far from the mech's centre a crop dies (its body capsule is 150 cm, one mound tile; mounds sit 150 cm apart). foot_radius_cm: on legs, how far from each foot a crop dies (the feet stride outside the body circle). max_height_cm: a mech whose feet or wheels are higher than this above a mound (jumping, flying) passes over it. min_move_cm: a mech or foot that moved less than this since the last check does not trample. check_ms: how often each mech is checked.",
+    "_sound_note": "sound: the game's FMOD event played at each crushed mound ('' for none). Default: a bush breaking (picked in game over the Field Plow's Removal Mode sound, /Game/FMOD/Events/TransformModes/Plough/Crops/Plough_Remove_Tile_Crop). Try others in game with the console command  hardcore sound <name>. sounds_at_once: how many crush sounds may play together (FMOD cuts the oldest copy of an event off when too many start, which sounds like a click). sound_gap_ms: the shortest time between two crush sounds. sound_cut_ms: a list of windows in ms (or one number). Past sounds_at_once, each window lets one more crunch start over the oldest one's ending: [750, 500, 400, 300, 200, 100] lets a 3rd start once the oldest has at most 750 ms left, a 4th at 500 ms, and so on down to an 8th at 100 ms, so at most 8 play at once (0.8.14 started the 3rd at 900 ms, 0.8.12 had [500, 250]). The oldest is never stopped; it plays out. This happens only some of the time: the crush has to land in that last stretch. The bush crunch is about 1.4 s long. vehicle_sound_max_cm: in car, tractor and flight mode, a crunch further than this from the camera plays this far from it instead, in the same direction (0: off). The listener is at the camera, and the car's chase camera drops back with speed: the crushed mounds were about 6 m from it standing still and 17-18.5 m at speed, too far to hear the crunch (on legs, about 5.5 m). On legs the crunch always plays on the mound.",
+    "sound": "/Game/FMOD/Events/Break/Break_Bush",
+    "sounds_at_once": 2,
+    "sound_gap_ms": 0,
+    "sound_cut_ms": [750, 500, 400, 300, 200, 100],
+    "vehicle_sound_max_cm": 1000,
+    "radius_cm": 150,
+    "foot_radius_cm": 75,
+    "max_height_cm": 120,
+    "min_move_cm": 10,
+    "check_ms": 100
+  },
+  "storage": {
+    "_note": "Local storage (feature 'storage', script storage.lua). In the game, everything in any storage of a base counts for crafting, building, deliveries and tasks anywhere in that base; outside a base only the mech's own inventory counts. With this on, a storage counts only within reach_cm of where it is used, measured flat: whenever a menu or station asks for the base inventory (crafting, building, deliveries, upgrades), the storages further than reach_cm from the spot it asks about get the game's own NoRemoteInventoryAccess tag, the one the game gives its generators so their fuel is not base inventory; nothing runs between requests. A tagged storage still opens normally, and pipes still move items in and out of it. Generators are never touched. reach_cm: how close to that spot a storage must be (0: no storage counts, only the mech's inventory, as outside a base). check_ms: how often the script looks whether the feature was switched off (it touches nothing in between). storage_class (optional): the storage class the game uses, /Game/Blueprints/Constructs/BP_StorageConstruct.BP_StorageConstruct_C.",
+    "reach_cm": 1500,
+    "check_ms": 1000
+  },
+  "cut_buildings": {
+    "_note": "Buildings the game ships but hides (feature flag Features.Limbo), made buildable again by tools/build_buildings.py (container HardcoreLogisticsBuildings_P in Paks/~mods). Each keeps its own row and Blueprint, so placed ones stay valid even without the mod: the row loses the feature flag and gets the display name, description and cost below, and the milestone's ConstructRewards list unlocks it. A world already past that milestone gets it when it loads (unlocks.lua), whatever features it runs. The Workshop Shed: a quick building for the first machines, unlocked with the first delivery (a mod on Nexus does the same; it is credited in the Nexus description).",
+    "WorkshopShed": {
+      "display_name": "Workshop Shed",
+      "description": "A quick shed to house your first machines. Improves the efficiency of crafting constructs built inside.",
+      "cost": { "Wood": 10, "Stone": 5 },
+      "milestone": "Milestone1"
+    }
+  },
+  "hub": {
+    "_note": "The Logistics Hub buildings (tools/build_buildings.py writes them into its container, HardcoreLogisticsBuildings_P in Paks/~mods). Each is a renamed copy of a construct's Blueprint (template: its DT_Constructs row), with its own row in DT_Constructs, unlocked by the milestone's ConstructRewards. A new row starts as a copy of its template's row (icon), saved like other constructs; its build-menu tab and group come from menu_group_from (the Water Tower's: Constructs - Storage). Any of them makes every storage in its base count from anywhere in that base again (feature 'storage').",
+    "milestone": "Milestone10",
+    "menu_group_from": "WaterTower",
+    "feature": "storage",
+    "_feature_note": "The hubs belong to this feature (since 0.14.1): only worlds running it see them. The container ships each hub row hidden, with the feature flag Features.Legacy (the build wheel leaves out a row whose flag the game has not switched on; the game hides its retired Automators the same way), and leaves them out of the milestone's ConstructRewards. Before a world with the feature loads, the runtime clears the flag and adds them to the milestone's rewards (DT_Constructs and DT_DeliveryMilestones, both loaded all session); without it, vanilla. Placed hubs are not touched: only the build wheel reads that flag (and the recipe unlocks, which the hubs are not in). After a switch in a loaded world, the change follows on the next load, as the storage sizes do.",
+    "_buildings_note": "One building since 0.13.2. 0.10.3-0.13.1 also had two test versions (Logistics Hub II on the cut Workshop Shed, III on the cut Barn) to try more buildings in one wheel; the wheel coped. They were never placed in any save (only unlocked), so removing them is safe.",
+    "_cost_note": "The release cost, from Milestone 10 (Steel Technology) on. Item IDs are DT_Items rows (build_buildings.py checks them).",
+    "_description_note": "Building descriptions are short and plain like the game's own (\"Shows the upcoming weather.\", \"Houses an autonomous drone that will water nearby mounds within the Home Area. Requires water to operate.\"), at the user's request (0.15.4): the build menu shows the energy cost on its own line, and the README explains the rest.",
+    "_model_note": "model (optional): the building's own mesh and icon instead of its template's. art/<model in snake_case>/ holds the .blend and its export (art/export_model.py); tools/cook_art.py cooks it with Unreal 4.27 into dist/art; build_buildings.py then points the Blueprint copy's mesh and the row's icon at it. The template's other components stay (switch them off with template_edits), so a model should fit the template's footprint; the Water Reservoir places by the model's own collision boxes.",
+    "_energy_note": "energy (optional): the building's base cost on the game's Energy Meter, a DT_EnergyValues row (the energy handler reads its cost there by construct name), so the template needs the game's energy handler (BPC_EnergyHandler). The playstyle's Construct Energy Costs scales it like every machine's (DT_PlaystyleSettings ConstructEnergyCost: Balanced x1, Relaxed x0.5, Creative x0, Challenging x2), so 100 shows as 200 in a Challenging world (the user's choice, 2026-11-09). Energy is one pool for the whole world: while the meter is below 0 the grid is Overloaded, machines run at normal speed, and storage.lua lets a hub with an energy cost link nothing until the meter is back at 0 or above (Energized).",
+    "_status_note": "status_icon and function_edits (optional): the focus panel (what shows when you look at the building) comes from the template's StatusConditions function. function_edits swaps a string-table text there for our own (texts: key -> text) and a string for another of the same length (strings), without moving any other bytecode. The Logistics Hub replaces the reservoir's water line with 'Securing base logistics' and its water-drop icon with status_icon: a flat golden drone-and-crate glyph like the game's status icons, drawn by art/logistics_hub/status_icon.py and cooked to /Game/HardcoreLogistics/Art/T_HubIcon, a path exactly as long as the water icon's.",
+    "_template_edits_note": "template_edits (optional): values the template's component overrides already set, rewritten in place (null clears a mesh, a number sets an int or float, [x, y, z] a vector). The Logistics Hub uses the Water Reservoir (BP_Construct child, so no E action, and it has the energy handler), with its water parts switched off: the water surface, the silo foundation and the pipe connectors lose their meshes, the connectors and the water-gun capsule move 100 m underground, and the tank holds 0.01 L (not 0, which the Blueprint might divide by).",
+    "buildings": [
+      { "row": "LogisticsHub", "template": "WaterReservoir", "display_name": "Logistics Hub", "model": "LogisticsHub", "energy": 100,
+        "status_icon": "T_HubIcon",
+        "function_edits": {
+          "StatusConditions": {
+            "texts": { "AmountAndPumpingFormat": "Securing base logistics" },
+            "strings": { "/Game/Graphics/UI/Icons/T_WaterIcon.T_WaterIcon": "/Game/HardcoreLogistics/Art/T_HubIcon.T_HubIcon" }
+          }
+        },
+        "template_edits": {
+          "WaterPlane_GEN_VARIABLE": { "StaticMesh": null },
+          "Foundation_GEN_VARIABLE": { "StaticMesh": null },
+          "InputConnectionMesh_GEN_VARIABLE": { "StaticMesh": null, "RelativeLocation": [0, 0, -10000] },
+          "OutputConnectionMesh_GEN_VARIABLE": { "StaticMesh": null, "RelativeLocation": [0, 0, -10000] },
+          "WaterTank_GEN_VARIABLE": { "MaxAmount": 0.01 },
+          "WaterHarvestCapsule_GEN_VARIABLE": { "CapsuleRadius": 1, "CapsuleHalfHeight": 1, "RelativeLocation": [0, 0, -10000], "RelativeScale3D": [1, 1, 1] }
+        },
+        "description": "Links all storage within the Home Area. Requires power to operate.",
+        "cost": { "SteelFrame": 10, "IronElectronics": 10, "Concrete": 20 } }
+    ]
+  },
+  "drone_stations": {
+    "_note": "Drone Stations, wireless pipes between bases (since 0.15.0). tools/build_buildings.py builds them like the hubs (renamed Blueprint copies with their own DT_Constructs rows, in the buildings container) and gives them to every world: no settings row, unlocked by the milestone's ConstructRewards (a world already past it gets them when it loads, unlocks.lua). Script drones.lua moves the items. Both are copies of Storage Box II, so they are storages: pipes fill an Input station (its Resource Filter picks what they bring), and pipes take from an Output station (whatever the machines and storages behind it ask for). role: 'input' keeps only the green input port (HasOutputPort off: the storage then registers no output port and hides its mesh), 'output' only the orange output port (its input port moves 100 m underground, as the hub's water connectors did). A new row copies its template's SaveType, so the contents save like Storage Box II's (the hub's row is saved like decorations, which have none).",
+    "milestone": "Milestone8",
+    "menu_group_from": "Pipe",
+    "_pairing_note": "The user's choice (2026-11-09): stations link by paint colour (the construct's AuthPaintColorName; 20 paints, made at the Color Refiner and Color Mixer). Every input station of a colour sends to every output station of that colour; unpainted stations are Gray, their default, which is a channel like any other, so the first pair works without paint.",
+    "_transfer_note": "Each input station has one drone. When the station holds items and an output station of its colour has room, the drone flies to the output with the most free room (nearest on a tie), taking distance / speed_mps seconds (at least min_trip_s / 2), unloads up to load_kg there, and flies back the same time. The items leave the input station only on arrival, added to the output first and then taken from the input in the exact amount the output took, so nothing is lost or doubled, also across a save. So a station 200 m away moves about 2.5 kg/s, one 1 km away about 0.5 kg/s. check_ms: how often the drones are looked at. rescan_s: how often the stations are found again through the object table (costly), in between by their saved paths.",
+    "_balance_note": "The user's balance (0.15.3, 2026-11-09): drones carry half what they did (100 -> 50 kg per trip), the stations cost double, and they use energy (\"would fit the theme and be another cost to them\"); Milestone 8 stays.",
+    "load_kg": 50,
+    "speed_mps": 20,
+    "min_trip_s": 2,
+    "check_ms": 1000,
+    "rescan_s": 15,
+    "_cost_note": "Double the Watering Drone Station's (the game's own drone building from the same milestone, Milestone 8, Drones & Roads), as the user asked.",
+    "_energy_note": "energy: each station's base cost on the Energy Meter, a DT_EnergyValues row by construct name; the playstyle scales it like every machine's (Balanced x1, Challenging x2). Storage Box II, the template, has no energy handler, so drones.lua gives each station the game's own one (BPC_EnergyHandler, added to the actor with AddComponentByClass as the world loads and when a station is first found; it reads its cost from that row and registers with the game state, and unregisters when the station is demolished). Drones only take off while the grid is Energized (the meter at 0 or above), as the hub only links then. 50 each: a linked pair costs what a hub costs (100); for scale, the Watering Drone Station uses 20 and the Diesel Generator II from the same milestone makes 250.",
+    "energy_handler": "runtime",
+    "_model_note": "Own models since 0.15.1, version 2 in 0.15.2 after the user's concept art: art/drone_stations/build_station.py builds both in Blender (ROLE input or output) into art/drone_input_station and art/drone_output_station; art/export_model.py bakes them. The body is like Storage Box II's chest, as the user asked, because it is painted: framed 'paintable' panels (their baked paint mask lets the construct's paint colour, the link channel, show; Gray when unpainted) with the chest's fine diagonal ribbing (hl_pattern), the chest's thin orange stripe, bolts and latches. The logo screen on the right side is the user's pick from the concept: a cube with an arrow (up: sends, down: receives) between signal arcs. The storage template's focus panel has no icon line, so the logo is only on the building. The game's pipe rings and the interaction box are children of the StaticMesh component, so their places are in the model's own space (Unreal cm: Blender x, -y, z): each ring sits on the port socket, 75 cm out and 62 cm up, the input ring at the back (it faces the mesh's -Y), the output ring at the front; the interaction box covers the 1.9 x 1.6 x 1.85 m station (BoxExtent 32 x 30.5 x 32 scaled).",
+    "buildings": [
+      { "row": "DroneInputStation", "role": "input", "template": "StorageBox2", "model": "DroneInputStation",
+        "display_name": "Drone Input Station",
+        "description": "Sends items over long distances by drone. Paint it to set its channel. Requires power to operate.",
+        "energy": 50,
+        "template_edits": {
+          "_note": "ClassDefault is the class default object (Default__BP_<row>Construct_C).",
+          "ClassDefault": { "HasOutputPort": false },
+          "OutputConnectionMesh_GEN_VARIABLE": { "StaticMesh": null, "RelativeLocation": [0, 83, -10000] },
+          "InputConnectionMesh_GEN_VARIABLE": { "RelativeLocation": [0, -75, 62] },
+          "InteractBoxComp_GEN_VARIABLE": { "RelativeLocation": [0, 0, 92], "RelativeScale3D": [2.98, 2.64, 2.9] }
+        },
+        "cost": { "IronFrame": 6, "IronElectronics": 4, "RedCrystal": 4 } },
+      { "row": "DroneOutputStation", "role": "output", "template": "StorageBox2", "model": "DroneOutputStation",
+        "display_name": "Drone Output Station",
+        "description": "Receives items sent over long distances by drone. Paint it to set its channel. Requires power to operate.",
+        "energy": 50,
+        "template_edits": {
+          "InputConnectionMesh_GEN_VARIABLE": { "RelativeLocation": [0, -62, -10000] },
+          "OutputConnectionMesh_GEN_VARIABLE": { "RelativeLocation": [0, 75, 62] },
+          "InteractBoxComp_GEN_VARIABLE": { "RelativeLocation": [0, 0, 92], "RelativeScale3D": [2.98, 2.64, 2.9] }
+        },
+        "cost": { "IronFrame": 6, "IronElectronics": 4, "RedCrystal": 4 } }
+    ]
+  },
+  "tables": {
+    "DT_Modules": {
+      "_note": "The mech's Large Object (hauling) capacity comes from the right-arm module, in units (a mineral chunk such as an Iron Chunk takes 2 units). Vanilla 1.0: 4 / 6 / 8 / 10 / 14 / 18 / 24 for Mech Arms Mk. 1-7.",
+      "StandardRightArm":   { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 2 },
+      "NakedRightArm":      { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 4 },
+      "HotRodRightArm":     { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 6 },
+      "HermesRightArm":     { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 8 },
+      "FM04RightArm":       { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 10 },
+      "PowerArmorRightArm": { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 14 },
+      "HaulerRightArm":     { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 18 }
+    },
+    "DT_CoreUpgrades": {
+      "_note": "Hauling Capacity chips, in units. Vanilla 1.0: Lv. 1 +2, Lv. 2 +3, Lv. 3 +4. Their description text still shows the vanilla numbers (this tool only changes numbers).",
+      "HaulingCapacity0": { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 1 },
+      "HaulingCapacity1": { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 2 },
+      "HaulingCapacity2": { "Stats[Tag=Upgrade.Hauling.Capacity].Value": 3 }
+    },
+    "DT_StorageCapacities": {
+      "_note": "Storage sizes, in grams (StorageBox 150000 = 150 kg), doubled for local storage (feature 'storage'): with only nearby storage counting, each spot needs more room. Every placed storage takes its size from this table when the world loads (BP_ConstructHandler BeginPlay -> SetInputValue -> Input.Server_SetMaxWeight), so placed ones grow too; the Blueprint defaults are older numbers and lose (Storage Shed II 3,000 kg there, 10,000 here). Silos hold one item type (MaxNumStacks 1, a Blueprint setting, left as is). Left vanilla: the storage trailers, generators (fuel), feed troughs and the obsolete Automators.",
+      "BurlapSacks":  { "MaxWeight": "x2" },
+      "StorageBox":   { "MaxWeight": "x2" },
+      "StorageBox2":  { "MaxWeight": "x2" },
+      "WoodenCrate":  { "MaxWeight": "x2" },
+      "Barrel":       { "MaxWeight": "x2" },
+      "SmallShed":    { "MaxWeight": "x2" },
+      "StorageShed":  { "MaxWeight": "x2" },
+      "StorageShed2": { "MaxWeight": "x2" },
+      "Silo":         { "MaxWeight": "x2" },
+      "Silo2":        { "MaxWeight": "x2" },
+      "Silo3":        { "MaxWeight": "x2" }
+    },
+    "DT_Deliveries": {
+      "_note": "Planet delivery tasks. Rows are <Line>_<tier> (15 lines x tiers 1-10, plus Endgame/Earth cannon rows, which these patterns leave alone). Every line uses the same component ladder; vanilla amounts: T2 CopperWire 1, T3 CopperWire 5, T4 BronzeFrame 1, T5 BronzeFrame 2, T6 IronFrame 1, T7 IronFrame 2, T8 SteelFrame 1, T9 SteelFrame 2, T10 CubeMetalFrame 1. Crop amounts stay vanilla (a x1.5 crop multiplier was tried in 0.2.0 and dropped).",
+      "*_2":  { "Cost[CopperWire]": 5 },
+      "*_3":  { "Cost[CopperWire]": 15 },
+      "*_4":  { "Cost[BronzeFrame]": 5 },
+      "*_5":  { "Cost[BronzeFrame]": 10 },
+      "*_6":  { "Cost[IronFrame]": 10 },
+      "*_7":  { "Cost[IronFrame]": 20 },
+      "*_8":  { "Cost[SteelFrame]": 15 },
+      "*_9":  { "Cost[SteelFrame]": 25 },
+      "*_10": { "Cost[CubeMetalFrame]": 10 },
+
+      "_extras": "Extra component per planet (theme) and tier. Rule: an item may only appear at a tier if its recipe unlocks no later than the frame the game already asks there (T4-5 Bronze = Milestone 4, T6-7 Iron = M7, T8-9 Steel = M10, T10 Fractalite = M12). Unlocks used: Polymer M3; Bronze Parts/Electronics/Bar, Clear Glass M4; Clear Lens = Clear Glass + Furnace (M4); Iron Parts/Electronics/Bar, Cloth M7; Concrete M8; Steel Parts/Electronics/Bar M10; Fractalite Parts/Electronics/Bar M12. Discovery-gated items (silver/gold/aluminum, colored lenses) are left out. Amounts: complex items (Parts, Electronics, Lens) half the frame amount, simple materials the same as the frame amount.",
+
+      "_hewstone": "Hewstone (Wheat, Rabbage, Chromaize): machinery -> Parts",
+      "*_4 [PlanetName=Hewstone]":  { "Cost[+BronzeParts]": 3 },
+      "*_5 [PlanetName=Hewstone]":  { "Cost[+BronzeParts]": 5 },
+      "*_6 [PlanetName=Hewstone]":  { "Cost[+IronMechanicalParts]": 5 },
+      "*_7 [PlanetName=Hewstone]":  { "Cost[+IronMechanicalParts]": 10 },
+      "*_8 [PlanetName=Hewstone]":  { "Cost[+SteelMechanicalParts]": 8 },
+      "*_9 [PlanetName=Hewstone]":  { "Cost[+SteelMechanicalParts]": 12 },
+      "*_10 [PlanetName=Hewstone]": { "Cost[+CubeMetalParts]": 5 },
+
+      "_tempest": "Tempest (Lumbloom, Zappertwig, GloFruit): storms -> Electronics",
+      "*_4 [PlanetName=Tempest]":  { "Cost[+BronzeElectronics]": 3 },
+      "*_5 [PlanetName=Tempest]":  { "Cost[+BronzeElectronics]": 5 },
+      "*_6 [PlanetName=Tempest]":  { "Cost[+IronElectronics]": 5 },
+      "*_7 [PlanetName=Tempest]":  { "Cost[+IronElectronics]": 10 },
+      "*_8 [PlanetName=Tempest]":  { "Cost[+SteelElectronics]": 8 },
+      "*_9 [PlanetName=Tempest]":  { "Cost[+SteelElectronics]": 12 },
+      "*_10 [PlanetName=Tempest]": { "Cost[+CubeMetalElectronics]": 5 },
+
+      "_wildernest": "Wildernest (Polyberry, Caroot, Papristalk): optics -> Clear Glass, then Clear Lens",
+      "*_4 [PlanetName=Wildernest]":  { "Cost[+ClearGlass]": 5 },
+      "*_5 [PlanetName=Wildernest]":  { "Cost[+ClearGlass]": 10 },
+      "*_6 [PlanetName=Wildernest]":  { "Cost[+ClearLens]": 5 },
+      "*_7 [PlanetName=Wildernest]":  { "Cost[+ClearLens]": 10 },
+      "*_8 [PlanetName=Wildernest]":  { "Cost[+ClearLens]": 8 },
+      "*_9 [PlanetName=Wildernest]":  { "Cost[+ClearLens]": 12 },
+      "*_10 [PlanetName=Wildernest]": { "Cost[+ClearLens]": 5 },
+
+      "_cryolis": "Cryolis (Honeybottle, Cloudbud, Feather): shelter -> Polymer, Cloth, Concrete",
+      "*_4 [PlanetName=Cryolis]":  { "Cost[+Polymer]": 5 },
+      "*_5 [PlanetName=Cryolis]":  { "Cost[+Polymer]": 10 },
+      "*_6 [PlanetName=Cryolis]":  { "Cost[+Cloth]": 10 },
+      "*_7 [PlanetName=Cryolis]":  { "Cost[+Cloth]": 20 },
+      "*_8 [PlanetName=Cryolis]":  { "Cost[+Concrete]": 15 },
+      "*_9 [PlanetName=Cryolis]":  { "Cost[+Concrete]": 25 },
+      "*_10 [PlanetName=Cryolis]": { "Cost[+Concrete]": 10 },
+
+      "_verdemere": "Verdemere (Coilvine, Quartznip, Amber): metal stock -> Bars",
+      "*_4 [PlanetName=Verdemere]":  { "Cost[+BronzeBar]": 5 },
+      "*_5 [PlanetName=Verdemere]":  { "Cost[+BronzeBar]": 10 },
+      "*_6 [PlanetName=Verdemere]":  { "Cost[+IronBar]": 10 },
+      "*_7 [PlanetName=Verdemere]":  { "Cost[+IronBar]": 20 },
+      "*_8 [PlanetName=Verdemere]":  { "Cost[+SteelBar]": 15 },
+      "*_9 [PlanetName=Verdemere]":  { "Cost[+SteelBar]": 25 },
+      "*_10 [PlanetName=Verdemere]": { "Cost[+CubeMetalRefined]": 10 }
+    }
+  }
+}

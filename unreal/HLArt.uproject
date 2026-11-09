@@ -1,0 +1,16 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{A413381D-4C9D-6FE9-5599-4CB9780D59AC}",
+	"Category": "",
+	"Description": "Hardcore Logistics art: imports the Blender exports and cooks them for Lightyear Frontier (tools/cook_art.py). Unreal Engine 4.27, the game's version.",
+	"Plugins": [
+		{
+			"Name": "PythonScriptPlugin",
+			"Enabled": true
+		},
+		{
+			"Name": "EditorScriptingUtilities",
+			"Enabled": true
+		}
+	]
+}
