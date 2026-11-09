@@ -31,6 +31,7 @@
 --                       hardcore hub [unlock]          the Logistics Hubs: unlocks and the hubs placed (storage.lua)
 --                       hardcore unlock [all | row]    the mod's buildings: unlock state; unlock them now (unlocks.lua)
 --                       hardcore drones                the Drone Stations by paint colour and their drones (drones.lua)
+--                       hardcore drones on | off       the Delivery Drone Stations setting, like any feature
 
 local MOD = "[HardcoreLogistics] "
 local function log(msg) print(MOD .. msg .. "\n") end
@@ -855,10 +856,8 @@ RegisterConsoleCommandHandler("hardcore", function(FullCommand, Parameters, Ar)
                 st.runs > 0 and st.total / st.runs or 0, st.max, st.last, st.slow, SLOW_MS))
         end
         out("timing: hardcore timing reset  clears the counters")
-    elseif extraCommands[a1] then
-        local ok, err = pcall(extraCommands[a1], out, a2)
-        if not ok then out(a1 .. " failed: " .. tostring(err)) end
     elseif a1 == "on" or a1 == "off" or (FEATURE[a1] and (a2 == "on" or a2 == "off")) then
+        -- before the scripts' own commands: "hardcore drones on" switches the feature, "hardcore drones" is the readout
         if not slot then
             out("no world is loaded")
             return true
@@ -870,6 +869,9 @@ RegisterConsoleCommandHandler("hardcore", function(FullCommand, Parameters, Ar)
         end
         out(string.format("saved for %s: %s.%s", slot, describe(readWorlds()[slot] or {}),
             needsReload() and " Save and reload the world to apply it." or ""))
+    elseif extraCommands[a1] then
+        local ok, err = pcall(extraCommands[a1], out, a2)
+        if not ok then out(a1 .. " failed: " .. tostring(err)) end
     else
         local ids, cmds = {}, { "check", "timing", "on", "off", "<feature> on", "<feature> off" }
         for _, f in ipairs(FEATURES) do ids[#ids + 1] = f.id end

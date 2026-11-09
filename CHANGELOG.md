@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.15.7 (2026-11-10): clearer settings rows, and a row of its own for the Drone Stations
+
+The user asked for row names that say what each part does, and for the drones to have "a separate setting ... not
+be included in the local storage. No change to how they work", named "delivery drone stations".
+
+- **Row names** (`mod_config.json` feature labels). The setting IDs stay, so saved choices are kept:
+  - "Hardcore Logistics: Lower Mech Cargo" (was "Mech Cargo");
+  - "Hardcore Logistics: Bigger Material Deliveries" (was "Deliveries");
+  - "Hardcore Logistics: Local Base Storage" (was "Local Storage");
+  - "Hardcore Logistics: Crop Trampling" as before.
+- **A fifth row, "Hardcore Logistics: Delivery Drone Stations"** (feature `drones`, live, on with the Hardcore
+  Logistics card). The stations work as before while it is on.
+  - **Build menu:** it works like the Logistics Hub with local storage. The container ships both station rows with
+    `Features.Legacy` and outside Milestone 8's rewards (`drone_stations.feature`). `build_buildings.py` now ties any
+    building group that has a feature, not only the hubs. Before a world with the row on loads, the runtime clears the
+    flags and adds the stations to Milestone 8. Worlds without it never see them, and earned stations unlock on load
+    only in worlds with it.
+  - **Drones (`drones.lua`):** they follow the row at once. While it is off, no drone flies and no station gets an
+    energy handler. Switching it off destroys the handlers (`K2_DestroyComponent`; their EndPlay unregisters them),
+    so placed stations are plain storage. A drone in the air is dropped with its trip, and its load stays in the
+    input station.
+  - **After a switch in a loaded world:** the build menu follows on the next load, and the row shows the "finish
+    applying" reload line.
+  - **Console:** `hardcore drones` says when the row is off, and whether this world's build menu shows the stations.
+    `hardcore drones on|off` switches the row. `main.lua` now handles `<feature> on|off` before the scripts' own
+    commands, since this feature and the readout share the name.
+- **Existing worlds:** `worlds.txt` lists the features that are on, so every world starts with the new row off.
+  Placed stations stay, as plain storage, until the row is turned on.
+
+The runtime and container are rebuilt and installed. All eight mocked runs pass, with new cases:
+- `smoke_drones`: off, switched on, switched off mid-flight, on again, and a new world.
+- `smoke_hub_visibility`: stations shown only in worlds with `drones`, both features' table entries applied and
+  restored apart, and the console order.
+
+Tested in game (2026-11-10): the user reported "Seems to be working".
+
 ## 0.15.6 (2026-11-09): the settings rows say "Hardcore Logistics"
 
 The user kept the mod's name and the card title, Hardcore Logistics ("leave it like it is"), and asked for the

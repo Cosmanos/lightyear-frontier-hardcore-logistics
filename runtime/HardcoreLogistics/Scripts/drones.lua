@@ -26,11 +26,20 @@
 -- the Logistics Hub only links then; a drone already flying finishes its trip. When the meter cannot be read, drones
 -- fly (and the readout says why).
 --
+-- The setting (0.15.7, the user's wish): the stations belong to a feature of their own, cfg.feature ('drones', the
+-- settings row "Hardcore Logistics: Delivery Drone Stations"), apart from local storage. The container ships both
+-- rows hidden and outside their milestone's rewards; main.lua shows them in worlds that load with the feature, as it
+-- does the Logistics Hub with local storage (the build menu follows on the next load after a switch). This script
+-- follows the setting at once: while it is off no drone flies and no station gets an energy handler, and when it is
+-- switched off the handlers come back off (their EndPlay unregisters them, as when a station is demolished), so placed
+-- stations are plain storage. A drone in the air then is dropped with its trip: items only move on arrival, so
+-- nothing is lost.
+--
 -- Cost: the stations are found through the whole object table (FindAllOf) every rescan_s seconds and by their paths in
 -- between (StaticFindObject); a check reads each station's colour, place and inventory weight; a trip calls a few
 -- inventory functions. `hardcore timing` shows the loop's cost.
 --
--- Console:  hardcore drones   the stations by colour, each drone's state, and what the drones carried so far
+-- Console:  hardcore drones   the setting, the stations by colour, each drone's state, and what the drones carried
 
 local STATICS = "/Script/Engine.Default__GameplayStatics"
 local ITEM_SOURCE = 0            -- EItemSource::Unknown, for Server_AddItemStack
@@ -64,6 +73,11 @@ return function(api)
     local HANDLER_CLASS = type(cfg.energy_handler_class) == "string" and cfg.energy_handler_class ~= ""
         and cfg.energy_handler_class or nil       -- the game's energy handler, added to each station (nil: no energy)
     local GRAMS = cfg.item_grams or {}
+    local FEATURE = type(cfg.feature) == "string" and cfg.feature ~= "" and cfg.feature or nil   -- nil: always on
+    local LABEL = FEATURE
+    for _, f in ipairs(api.features or {}) do
+        if f.id == FEATURE and type(f.label) == "string" then LABEL = f.label end
+    end
     local LIQUID = {}
     for _, n in ipairs(cfg.liquids or {}) do LIQUID[n] = true end
 
@@ -75,7 +89,8 @@ return function(api)
     local detail = 0
     local last = { inputs = 0, outputs = 0, client = false, power = nil, powerError = nil, grounded = 0 }
     local handled = {}               -- station path -> "found" | "added" | "failed": its energy handler, this world
-    local handlers = { found = 0, added = 0, failed = 0, error = nil }
+    local handlers = { found = 0, added = 0, failed = 0, removed = 0, error = nil }
+    local off = nil                  -- true while the feature is off in this world, false while on, nil: not seen yet
 
     local ensureHandler               -- defined below, used by survey()
 
@@ -83,6 +98,11 @@ return function(api)
         if o == nil then return false end
         local ok, v = pcall(function() return o:IsValid() end)
         return ok and v == true
+    end
+
+    -- true while the loaded world runs with the stations' feature (live: a switch counts at once)
+    local function enabled()
+        return FEATURE == nil or api.isActive(FEATURE) == true
     end
 
     local function fullName(o)
@@ -291,6 +311,26 @@ return function(api)
         end
     end
 
+    -- take the energy handlers back off every station (the feature is off in this world): destroying the component
+    -- runs its EndPlay, which unregisters it from the game state, as when a station is demolished. Host only, like
+    -- adding them. Returns how many came off; the stations get them again when the feature is back on.
+    local function removeHandlers()
+        handled = {}
+        if not HANDLER_CLASS then return 0 end
+        local okC, cls = pcall(StaticFindObject, HANDLER_CLASS)
+        if not okC or not valid(cls) then return 0 end
+        lastSearch = -math.huge                  -- a fresh search: every station placed so far
+        local removed = 0
+        for _, o in ipairs(findStations()) do
+            if call(o, "HasAuthority") ~= false then
+                local comp = call(o, "GetComponentByClass", cls)
+                if valid(comp) and pcall(function() comp:K2_DestroyComponent(comp) end) then removed = removed + 1 end
+            end
+        end
+        handlers.removed = handlers.removed + removed
+        return removed
+    end
+
     -- the Energy Meter: true (Energized), false (Overloaded) or nil (unreadable), plus available and used
     local function power(ctx)
         local ok, gs = pcall(function() return StaticFindObject(STATICS):GetGameState(ctx) end)
@@ -318,7 +358,7 @@ return function(api)
                 end
                 local st = { obj = o, path = name:match("^%S+ (.+)$"), kind = kind, role = kind.role, color = colorOf(o),
                              inv = inv, loc = locationOf(o) }
-                ensureHandler(st)
+                if enabled() then ensureHandler(st) end
                 all[#all + 1] = st
                 byPath[st.path] = st
             end
@@ -330,6 +370,22 @@ return function(api)
     local function tick()
         clock = clock + CHECK_MS / 1000
         if api.worldLoaded and not api.worldLoaded() then return end
+        if not enabled() then
+            if off ~= true then              -- once per world load, and at each switch off
+                local switched = off == false
+                off, drones = true, {}
+                local removed = removeHandlers()
+                last.inputs, last.outputs, last.power, last.powerError, last.grounded = 0, 0, nil, nil, 0
+                log(string.format("drone stations: %s in this world (%s): no drones fly%s", switched and "switched off"
+                    or "off", LABEL, removed > 0 and string.format(", %d energy handlers taken off", removed) or ""))
+            end
+            return
+        end
+        if off == true then
+            log("drone stations: switched on in this world (" .. LABEL .. "); drones fly again")
+            lastSearch = -math.huge          -- stations placed while it was off count at once
+        end
+        off = false
         local all, byPath = survey()
         if not all then return end
         local outputs, inputs = {}, {}
@@ -417,13 +473,36 @@ return function(api)
             handlers.found, handlers.failed, handlers.error and (" (" .. handlers.error .. ")") or "", meter)
     end
 
+    -- the build menu follows the tables the world loaded with (main.lua isLoadedWith); the drones follow the setting
+    local function menuLine()
+        if not FEATURE or not api.isLoadedWith then return nil end
+        local shown, on = api.isLoadedWith(FEATURE), enabled()
+        if shown and on then return "build menu: shown in this world" end
+        if not shown and not on then return "build menu: hidden in this world, and no milestone reward" end
+        if shown then return "build menu: still shown until the world loads again (the setting was switched off)" end
+        return "build menu: hidden until the world loads again (the setting was switched on): save and reload"
+    end
+
+    local function offLine()
+        return string.format("drone stations: off in this world (%s): no drones fly and the stations use no energy; "
+            .. "placed stations hold their items like any storage (%d energy handlers taken off this session)", LABEL,
+            handlers.removed)
+    end
+
     api.addReport(function(out)
+        if not enabled() then out(offLine()); return end
         out(string.format("drone stations: %d input, %d output%s; %s; %s", last.inputs, last.outputs,
             last.client and " (not the host: the host moves the items)" or "", totalsLine(), energyLine()))
     end)
 
-    -- "hardcore drones": the stations by colour, each drone, and the totals
+    -- "hardcore drones": the stations by colour, each drone, the totals, and where the setting and build menu stand
     api.addCommand("drones", function(out)
+        local menu = menuLine()
+        if not enabled() then
+            out(offLine())
+            if menu then out(menu) end
+            return
+        end
         local all = survey()
         if not all then out("drone stations: this machine is not the host; the host moves the items"); return end
         local now = #all > 0 and worldTime(all[1].obj) or clock
@@ -459,10 +538,11 @@ return function(api)
         end
         out("carried so far: " .. totalsLine())
         out(energyLine())
+        if menu then out(menu) end
     end)
 
     local function forgetWorld()
-        paths, lastSearch, drones, handled = {}, -math.huge, {}, {}
+        paths, lastSearch, drones, handled, off = {}, -math.huge, {}, {}, nil
         last.inputs, last.outputs, last.power, last.powerError = 0, 0, nil, nil
     end
     api.onMapLoaded(forgetWorld)
@@ -472,6 +552,6 @@ return function(api)
         local ok, err = pcall(tick)
         if not ok then log("drone stations: " .. tostring(err)) end
     end)
-    log(string.format("drone stations ready (%d station types, load %.0f kg, %.0f m/s)", #CLASSES, LOAD_G / 1000,
-        SPEED_CM / 100))
+    log(string.format("drone stations ready (%d station types, load %.0f kg, %.0f m/s%s)", #CLASSES, LOAD_G / 1000,
+        SPEED_CM / 100, FEATURE and (", only where '" .. FEATURE .. "' runs") or ""))
 end

@@ -141,8 +141,8 @@ def _check_building(where: str, b: dict, rows: set) -> None:
 
 
 def load_buildings_config() -> dict:
-    """{"hub": {milestone, menu_group_from, feature, buildings}, "drones": {milestone, menu_group_from, transfer
-    numbers, buildings with a role}, "cut": {row: {display_name, description, cost, milestone}}}"""
+    """{"hub": {milestone, menu_group_from, feature, buildings}, "drones": {milestone, menu_group_from, feature,
+    transfer numbers, buildings with a role}, "cut": {row: {display_name, description, cost, milestone}}}"""
     with open(os.path.join(REPO, "mod_config.json"), encoding="utf-8") as fh:
         cfg = json.load(fh)
     hub = {k: v for k, v in cfg.get("hub", {}).items() if not k.startswith("_")}
@@ -166,8 +166,10 @@ def load_buildings_config() -> dict:
             v = drones.get(k)
             if not isinstance(v, (int, float)) or isinstance(v, bool) or v <= 0:
                 raise SystemExit(f"mod_config.json drone_stations.{k} must be a number above 0 (got {v!r})")
-        if "feature" in drones:
-            raise SystemExit("drone_stations.feature is not supported: the stations are in every world")
+        features = {f for f in cfg.get("features", {}) if not f.startswith("_")}
+        if "feature" in drones and drones["feature"] not in features:
+            raise SystemExit(f"mod_config.json drone_stations.feature must be one of the features "
+                             f"({', '.join(sorted(features))}), got {drones['feature']!r}")
         if drones.get("energy_handler", "template") not in ("template", "runtime"):
             raise SystemExit("drone_stations.energy_handler must be 'template' (the template's own energy handler) or "
                              f"'runtime' (drones.lua adds the game's), got {drones['energy_handler']!r}")
@@ -191,7 +193,7 @@ def load_buildings_config() -> dict:
 
 def new_buildings(cfg: dict) -> list[tuple[dict, dict]]:
     """(group, building) for every new building: the hubs, then the drone stations. A group carries the milestone,
-    the build-menu group (menu_group_from) and, for the hubs, the feature they belong to."""
+    the build-menu group (menu_group_from) and the feature its buildings belong to, if any."""
     return [(g, b) for g in (cfg["hub"], cfg["drones"]) for b in g.get("buildings", [])]
 
 
@@ -205,8 +207,9 @@ def runtime_energy(cfg: dict, group: dict) -> bool:
 
 
 def feature_tied(cfg: dict, group: dict) -> bool:
-    """Buildings shown only where a feature runs: the hubs, when hub.feature is set."""
-    return group is cfg["hub"] and bool(group.get("feature"))
+    """Buildings shown only where a feature runs: a group with a feature set (hub.feature: the hubs with 'storage';
+    drone_stations.feature: the stations with 'drones')."""
+    return bool(group.get("feature"))
 
 
 def hub_class_path(row: str) -> str:
@@ -451,9 +454,10 @@ def milestone_number(name: str):
 
 
 def runtime_settings() -> dict:
-    """What the runtime scripts need (edits.lua): the hubs (storage.lua), every building's unlock (unlocks.lua), and,
-    for hubs tied to a feature, the table changes that show them in worlds running it (main.lua applies those before
-    such a world loads, like the tables in mod_config.json, and restores them for any other)."""
+    """What the runtime scripts need (edits.lua): the hubs (storage.lua), the drone stations (drones.lua), every
+    building's unlock (unlocks.lua), and, for buildings tied to a feature (the hubs, the drone stations), the table
+    changes that show them in worlds running it (main.lua applies those before such a world loads, like the tables in
+    mod_config.json, and restores them for any other)."""
     cfg = load_buildings_config()
     hub, cut = cfg["hub"], cfg["cut"]
     feature = hub.get("feature")
@@ -464,15 +468,17 @@ def runtime_settings() -> dict:
                for b in hub.get("buildings", [])]
     drones = cfg["drones"]
     unlocks += [{"row": b["row"], "name": b["display_name"], "milestone": drones["milestone"],
-                 "milestone_number": milestone_number(drones["milestone"])} for b in drones.get("buildings", [])]
+                 "milestone_number": milestone_number(drones["milestone"]), "feature": drones.get("feature")}
+                for b in drones.get("buildings", [])]
     unlocks += [{"row": row, "name": b["display_name"], "milestone": b["milestone"],
                  "milestone_number": milestone_number(b["milestone"])} for row, b in cut.items()]
     out = {"unlocks": unlocks, "tables": []}
     if hubs:
         out["hub"] = {"hubs": hubs, "milestone": hub["milestone"], "milestone_number": milestone_number(hub["milestone"]),
                       "feature": feature}
-    if hubs and feature:
-        out["tables"] = feature_tables(hub, feature)
+    for g in (hub, drones):
+        if g.get("buildings") and g.get("feature"):
+            out["tables"] += feature_tables(g, g["feature"])
     if drones.get("buildings"):
         out["drones"] = drone_settings(drones)
     return out
@@ -495,26 +501,29 @@ def drone_settings(drones: dict) -> dict:
     out.update({k: drones[k] for k in DRONE_NUMBERS})
     if drones.get("energy_handler") == "runtime":
         out["energy_handler_class"] = ENERGY_HANDLER_CLASS
+    out["feature"] = drones.get("feature")          # drones.lua flies drones, and powers the stations, only while on
     for st, b in zip(out["stations"], drones["buildings"]):
         st["energy"] = b.get("energy", 0)
     return out
 
 
-def feature_tables(hub: dict, feature: str) -> list[dict]:
-    """The runtime edits (edits.lua tables) that show feature-tied hubs: each hub row's FeatureFlag cleared (shipped
-    as HIDDEN_FLAG) and the hubs added to their milestone's ConstructRewards (shipped without them). The property
-    names come from the game's own tables (a Blueprint struct member keeps its GUID suffix)."""
+def feature_tables(group: dict, feature: str) -> list[dict]:
+    """The runtime edits (edits.lua tables) that show a feature-tied group's buildings (the hubs, the drone stations):
+    each row's FeatureFlag cleared (shipped as HIDDEN_FLAG) and the rows added to the group's milestone's
+    ConstructRewards (shipped without them). The property names come from the game's own tables (a Blueprint struct
+    member keeps its GUID suffix). Each group gives its own pair of table entries, under its own feature."""
     from uasset import resolve_steps
     game = open_game_container()
     constructs = read_datatable(game.read_file(CONSTRUCTS_FILE)).rows
     milestones = read_datatable(game.read_file(MILESTONES_FILE)).rows
-    if hub["milestone"] not in milestones:
-        raise SystemExit(f"DT_DeliveryMilestones has no row {hub['milestone']} (hub.milestone)")
-    rows = [b["row"] for b in hub["buildings"]]
-    (_p, _leaf, flag_steps), = resolve_steps(constructs[hub["menu_group_from"]], "FeatureFlag.TagName")
-    (_p, _node, reward_steps), = resolve_steps(milestones[hub["milestone"]], "ConstructRewards", leaves_only=False)
+    if group["milestone"] not in milestones:
+        raise SystemExit(f"DT_DeliveryMilestones has no row {group['milestone']} (the milestone of {feature!r}'s "
+                         f"buildings)")
+    rows = [b["row"] for b in group["buildings"]]
+    (_p, _leaf, flag_steps), = resolve_steps(constructs[group["menu_group_from"]], "FeatureFlag.TagName")
+    (_p, _node, reward_steps), = resolve_steps(milestones[group["milestone"]], "ConstructRewards", leaves_only=False)
     names = [{"row": r, "steps": [list(s) for s in flag_steps], "vanilla": HIDDEN_FLAG, "value": "None"} for r in rows]
-    lists = [{"row": hub["milestone"], "steps": [list(s) for s in reward_steps], "add": rows}]
+    lists = [{"row": group["milestone"], "steps": [list(s) for s in reward_steps], "add": rows}]
     return [{"name": "DT_Constructs", "path": f"{CONSTRUCTS}.DT_Constructs", "feature": feature,
              "values": [], "maps": [], "names": names},
             {"name": "DT_DeliveryMilestones", "path": f"{MILESTONES}.DT_DeliveryMilestones", "feature": feature,
@@ -628,7 +637,8 @@ def build() -> list[str]:
     retargets: dict[str, tuple[str, str]] = {}          # row: (template's mesh, model's mesh)
     menus = {id(g): {base_name(t.name): t for t in table.row(g["menu_group_from"])}
              for g in (cfg["hub"], cfg["drones"]) if g.get("buildings")}
-    # hubs tied to a feature ship hidden and outside the milestone rewards; the runtime shows them (feature_tables)
+    # buildings tied to a feature (hubs, drone stations) ship hidden and outside the milestone rewards; the runtime
+    # shows them where the feature runs (feature_tables)
     hidden = hidden_flag_value(table) if any(feature_tied(cfg, g) for g, _b in pairs) else None
     for g, b in pairs:
         row, template, model = b["row"], b["template"], b.get("model")
@@ -840,7 +850,7 @@ def verify(cfg: dict, rewards: dict[str, list[str]], retargets: dict[str, tuple[
             if icon_file not in files:
                 raise SystemExit(f"verification failed: {icon_file} is not in the container")
         if feature_tied(cfg, g):
-            look += f", hidden ({HIDDEN_FLAG}) and a {hub['milestone']} reward only where '{hub['feature']}' runs"
+            look += f", hidden ({HIDDEN_FLAG}) and a {g['milestone']} reward only where '{g['feature']}' runs"
         if b.get("role"):
             look += f", drone {b['role']} station saved like {b['template']} ({save_type.rsplit(':', 1)[-1]})"
         lines.append(f"{b['row']} = {b['display_name']!r} ({look}, cost {b['cost']})")

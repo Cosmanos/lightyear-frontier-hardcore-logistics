@@ -467,11 +467,13 @@ def build_runtime() -> str:
             raise SystemExit(f"storage.{k} must be a number of 0 or more (got {v!r})")
     from build_buildings import runtime_settings
     buildings = runtime_settings() if (cfg.get("hub") or cfg.get("cut_buildings")) else {}
-    # the buildings' own table changes (hubs tied to a feature: shown, and a milestone reward, only where it runs)
+    # the buildings' own table changes (hubs and drone stations tied to a feature: shown, and a milestone reward,
+    # only where it runs)
     shown_by = []
     for t in buildings.get("tables", []):
         if t["name"] in cfg["tables"]:
-            raise SystemExit(f"{t['name']} is changed by the buildings (hub.feature) and listed in 'tables'; "
+            raise SystemExit(f"{t['name']} is changed by the buildings (hub.feature, drone_stations.feature) and "
+                             f"listed in 'tables'; "
                              f"one table cannot take both")
         if t["feature"] not in cfg["features"]:
             raise SystemExit(f"the buildings' {t['name']} changes belong to an unknown feature {t['feature']!r}")
@@ -491,7 +493,7 @@ def build_runtime() -> str:
             shutil.copy2(os.path.join(RUNTIME_SRC, "Scripts", f), os.path.join(scripts, f))
     print(f"runtime mod: {counts['values']} value changes, {counts['maps']} cost lists rewritten "
           f"({counts['added']} added entries)"
-          + (f"; the hubs shown through {', '.join(shown_by)}" if shown_by else "") + f" -> {RUNTIME_DIST}")
+          + (f"; the buildings shown through {', '.join(shown_by)}" if shown_by else "") + f" -> {RUNTIME_DIST}")
     from check_lua import run_check
     if not run_check([scripts]):
         raise SystemExit("Lua check failed; fix the scripts above (nothing was installed)")

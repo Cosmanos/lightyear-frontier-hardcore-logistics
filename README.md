@@ -1,6 +1,6 @@
 # Hardcore Logistics (Lightyear Frontier mod)
 
-Version 0.15.6, the first public release (Nexus Mods). Players: the release zip carries its own short read-me (`release/README.txt`); this file is the full documentation, for players who want the details and for anyone building the mod from source. MIT license (`LICENSE`).
+Version 0.15.7. 0.15.6 was the first public release (Nexus Mods). Players: the release zip carries its own short read-me (`release/README.txt`); this file is the full documentation, for players who want the details and for anyone building the mod from source. MIT license (`LICENSE`).
 
 Mod for Lightyear Frontier 1.0 (Unreal Engine 4.27). It changes seven things:
 
@@ -16,7 +16,7 @@ Mod for Lightyear Frontier 1.0 (Unreal Engine 4.27). It changes seven things:
    the Energy Meter has room for it. It comes with local storage: worlds without it never see the hub.
 7. **Drone Stations:** two new buildings, from Milestone 8, that work like a pipe between bases: pipes fill an
    input station, its drone flies the items to the output stations painted the same colour, and pipes take
-   them on from there.
+   them on from there. They have their own settings row: worlds without it never see them.
 
 ### Cargo
 
@@ -180,7 +180,7 @@ A new building that brings back the shared base inventory for its own base:
 - **No E action:** it is built on the game's Water Reservoir, a plain construct with an energy handler, and has no
   menu of its own. The Water Tower base of 0.12.x had an "Open" action, and an opened building counted as in use, so
   it could not be recycled.
-- **Only with local storage:** the hub belongs to the "Hardcore Logistics: Local Storage" setting. A world loaded with it off has
+- **Only with local storage:** the hub belongs to the "Hardcore Logistics: Local Base Storage" setting. A world loaded with it off has
   no hub in the build menu, and Milestone 10 neither lists nor announces it. Hubs already placed stay, and keep
   using energy; recycle them if you play that world without local storage. Switching the setting in a loaded world
   changes this on the next load, like the storage sizes.
@@ -265,7 +265,19 @@ pipes across the map:
   Drones are not saved: after a load every drone starts at home, and the items are still in their station.
 - **Not carried:** liquids. Large objects aren't items either, so they still need the mech or a trailer.
 - **Unlock:** Milestone 8 ("Drones & Roads"), with the game's Watering Drone Station. Worlds already past it get the
-  stations when they load. They are in every world, not tied to a settings row.
+  stations when they load. Only in worlds with their setting on (below).
+- **Their own setting (0.15.7):** the stations belong to the "Hardcore Logistics: Delivery Drone Stations" row, apart
+  from local storage. The user asked to "just have them toggled from settings", with "no change to how they work".
+  The Hardcore Logistics card turns it on with the rest.
+  - **Build menu:** a world loaded with the row off has no stations in the build menu, and Milestone 8 neither lists
+    nor announces them. It works like the Logistics Hub with local storage: the container ships both rows with the
+    `Features.Legacy` flag and outside Milestone 8's rewards. As a world with the row on loads, the runtime clears
+    the flags and adds the stations to the rewards. After a switch in a loaded world, the build menu follows on the
+    next load.
+  - **Drones:** they follow the row at once. While it is off, no drone flies and the stations use no energy: the
+    script takes their energy handlers back off, so placed stations are plain storage that keeps its items. A drone
+    in the air is dropped with its trip, and its load stays in the input station.
+  - `hardcore drones` says when the row is off, and whether this world's build menu shows the stations.
 - **Build menu:** the Constructs tab, with the automation pipes.
 - **Cost:** 6 Iron Frames, 4 Iron Electronics and 4 Red Crystals each, double the Watering Drone Station's.
 - **Look (0.15.2):** their own models, built in Blender by `art/drone_stations/build_station.py`, styled after the
@@ -302,7 +314,8 @@ pipes across the map:
   - For scale: the Watering Drone Station uses 20, and the Diesel Generator II from the same milestone makes 250.
   - `hardcore drones` shows the meter and how many stations have their handler.
 - **Console:** `hardcore drones` lists the stations by colour, how full each is, each drone's trip, and what the
-  drones carried so far. The first six trips are also logged.
+  drones carried so far, and where the setting and the build menu stand. The first six trips are also logged.
+  `hardcore drones on` and `hardcore drones off` switch the setting for the loaded world.
 - **Settings:** `mod_config.json` under `drone_stations` holds the names, costs, milestone, load, speed and timings.
 - **Tested in game (0.15.0):**
   - An unpainted input and output station passed items between pipe networks.
@@ -332,10 +345,11 @@ Features (defined in `mod_config.json` under `features`, one settings row each):
 
 | Feature | Row in the playstyle settings | Tables |
 |---|---|---|
-| `cargo` | Hardcore Logistics: Mech Cargo | `DT_Modules`, `DT_CoreUpgrades` |
-| `deliveries` | Hardcore Logistics: Deliveries | `DT_Deliveries` |
+| `cargo` | Hardcore Logistics: Lower Mech Cargo | `DT_Modules`, `DT_CoreUpgrades` |
+| `deliveries` | Hardcore Logistics: Bigger Material Deliveries | `DT_Deliveries` |
 | `trampling` | Hardcore Logistics: Crop Trampling | none: a live script (`Scripts/trample.lua`) |
-| `storage` | Hardcore Logistics: Local Storage | `DT_StorageCapacities` (the storage sizes); `DT_Constructs` and `DT_DeliveryMilestones` (the Logistics Hub's build-menu flag and Milestone 10 reward, from the buildings' config); plus a live script (`Scripts/storage.lua`) |
+| `storage` | Hardcore Logistics: Local Base Storage | `DT_StorageCapacities` (the storage sizes); `DT_Constructs` and `DT_DeliveryMilestones` (the Logistics Hub's build-menu flag and Milestone 10 reward, from the buildings' config); plus a live script (`Scripts/storage.lua`) |
+| `drones` | Hardcore Logistics: Delivery Drone Stations | `DT_Constructs` and `DT_DeliveryMilestones` (the Drone Stations' build-menu flags and Milestone 8 reward, from the buildings' config); plus a live script (`Scripts/drones.lua`) |
 
 Switching features per world:
 
@@ -348,18 +362,18 @@ Switching features per world:
   (`World_3=cargo,deliveries`, `World_4=off`; an older `World_3=on` line means every feature). The slots are
   the `World_N.sav` files in `%LOCALAPPDATA%\FarMech\Saved\SaveGames`.
 - With the world loaded, open the console with `~` or `F10` and type `hardcore cargo on`,
-  `hardcore trampling off`, `hardcore storage on`, `hardcore on` / `hardcore off` (every feature), or
-  `hardcore` (status).
+  `hardcore trampling off`, `hardcore storage on`, `hardcore drones on`, `hardcore on` / `hardcore off` (every
+  feature), or `hardcore` (status).
 
 A world runs with the features it was loaded with. The mod applies the table features just before the world
 loads, because the game's delivery system copies the delivery table while a world loads. A change to one of
 them in a loaded world is saved and applies the next time the world loads. Until then, a line right under the
 changed row in the Settings menu says "Save and reload the world to apply this change." (the list scrolls to
-show it). Crop trampling and local storage are scripts, so switching them applies at once, and crop trampling's
-row has no such line. Local storage also owns tables, the storage sizes and the Logistics Hub's flag and reward:
-like every table, they change as a world loads, so after a switch in a loaded world they follow on the next load.
-Its row's line says "Save and reload the world to finish applying this change.", and `hardcore storage on` says
-to reload.
+show it). Crop trampling, local storage and the drone stations run as scripts, so switching them applies at once,
+and crop trampling's row has no such line. Local storage and the drone stations also own tables: the storage sizes
+and the Logistics Hub's flag and reward, and the stations' flags and reward. Like every table, they change as a world
+loads, so after a switch in a loaded world they follow on the next load. Their rows' line says "Save and reload the
+world to finish applying this change.", and `hardcore storage on` and `hardcore drones on` say to reload.
 
 `hardcore timing` shows how long each script loop takes (they run inside game frames, so a slow one shows as a
 stutter at its interval). A run of 8 ms or more is also logged.
@@ -463,13 +477,15 @@ python tools/build_buildings.py install
 `build_buildings.py` builds the mod's buildings into their own container, `HardcoreLogisticsBuildings_P`, and copies
 it to `Paks\~mods` (close the game first). It handles two kinds:
 
-- **New buildings** (`mod_config.json` under `hub`, the Logistics Hub): it copies a template construct's Blueprint
+- **New buildings** (`mod_config.json` under `hub`, the Logistics Hub, and `drone_stations`, the Drone Stations): it
+  copies a template construct's Blueprint
   into a new class (`legacy_package.py`) and adds a new row to `DT_Constructs` (`legacy_table.py`).
 - **Cut buildings** (under `cut_buildings`, the Workshop Shed): it changes the building's own row, dropping the
   `Features.Limbo` flag and setting its name, description and cost.
 
-Each building goes into its milestone's reward list. The build then verifies the result: every other row must match
-the game's.
+Each building goes into its milestone's reward list, except buildings tied to a feature (the hub, the stations):
+they ship hidden and outside the rewards, and the runtime shows them where the feature runs. The build then verifies
+the result: every other row must match the game's.
 
 It needs retoc (github.com/trumank/retoc, v0.1.5) in `modding_tools\retoc\v0.1.5\` next to the repo, or set
 `LF_RETOC`. `build` only writes `dist/buildings/`. `uninstall` removes it from `~mods`, together with the container's
@@ -670,7 +686,7 @@ deliveries from Phase 2, and the per-world settings rows and playstyle card ever
 | - | Selectable mode | Done and tested: per-world runtime switch (0.4.0), settings rows on the new-game Customize screen and in the Settings menu (0.5.0), one row per feature with a reload line under the changed row (0.6.0, 0.6.1). A 5th playstyle card, Hardcore Logistics, tested (0.7.1, 0.7.2) | UE4SS Lua |
 | 7 | Bigger task quantities | Component amounts done and tested (0.2.0). Planet-themed extra components done and tested (0.3.0). Research deliveries (`DT_ResearchDeliveryPools`) unchanged | Data (this tool) |
 | 1 | Crop trampling | Done and tested (0.8.1–0.8.16): legs (body circle and feet), tractor, car, the immediate mound return, the crash fixes and the crush sound (a bush breaking, up to 8 overlapping, within 10 m of the camera in vehicles). The sound still needs some tuning; kept as is for now. The mech's body kills the plants it passes over, in every mode; the mounds stay. Trailer wheels not included | UE4SS Lua calling the crop manager |
-| 8 | Drone Logistics Stations | Done and tested (0.15.0): an input and an output station (Storage Box II copies, one port each; own models in 0.15.1, restyled after the user's concept in 0.15.2, tested), linked by paint colour; one drone per input station carries up to 50 kg per trip at 20 m/s; 50 energy each, double cost (0.15.3, tested); Milestone 8 | Copied Blueprints with template edits (`build_buildings.py`); transfer script (`drones.lua`) using the inventory's own functions |
+| 8 | Drone Logistics Stations | Done and tested (0.15.0): an input and an output station (Storage Box II copies, one port each; own models in 0.15.1, restyled after the user's concept in 0.15.2, tested), linked by paint colour; one drone per input station carries up to 50 kg per trip at 20 m/s; 50 energy each, double cost (0.15.3, tested); Milestone 8; its own settings row, Delivery Drone Stations (0.15.7, tested) | Copied Blueprints with template edits (`build_buildings.py`); transfer script (`drones.lua`) using the inventory's own functions |
 | 3 | Local base inventory | Done and tested (0.9.0): a storage counts only while a player is within 15 m of it. Storages hold twice as much while it is on (0.14.0, tested: switching it off leaves full storages over capacity, which the game allows) | UE4SS Lua, using the game's own `NoRemoteInventoryAccess` storage tag; no native hook needed |
 | 4 | Logistics Hub | Done and tested (0.10.0–0.13.1), final cost set (0.13.2): a new building, unlocked at Milestone 10, that keeps its base's storage shared. Its own Blender model with baked wear, wooden crates and icon; built on the Water Reservoir (no E action); uses 100 energy (200 on Challenging) and only works while Energized; its own focus-panel line and icon. Costs 10 Steel Frames, 10 Iron Electronics and 20 Concrete. Only in worlds with local storage on (0.14.1, not yet tested in game) | Copied Blueprint + new `DT_Constructs` row + milestone reward (`build_buildings.py`, retoc); model: Blender export, Unreal 4.27 cook (`cook_art.py`) with the game's own material; Lua for the effect |
 | - | Workshop Shed | Built (0.11.0), not yet tested in game: the cut Workshop Shed, buildable from Milestone 1 for 10 Wood and 5 Stone | Its own row un-hidden + milestone reward (`build_buildings.py`) |

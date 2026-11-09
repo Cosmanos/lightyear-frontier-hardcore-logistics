@@ -6,16 +6,17 @@ A reworked and rebalanced modded experience for players who like a planning chal
 
 WHAT IT CHANGES
 ---------------
-- Mech cargo: the mech carries fewer large objects, so trailers become the way to move bulk cargo.
-- Deliveries: planet deliveries ask for real batches of components.
+- Lower mech cargo: the mech carries fewer large objects, so trailers become the way to move bulk
+  cargo.
+- Bigger material deliveries: planet deliveries ask for real batches of components.
 - Crop trampling: the mech crushes the crops it walks over, so fields need paths.
-- Local storage: only the storage near you counts for crafting, building and deliveries.
+- Local base storage: only the storage near you counts for crafting, building and deliveries.
   To make up for it, storages hold twice as much.
-- Logistics Hub (Milestone 10, with local storage on): links all storage in its Home Area again.
-  Needs power.
-- Drone Stations (Milestone 8): an Input and an Output station carry items between bases by drone,
-  like a pipe without the pipe. Stations painted the same colour are linked; unpainted ones share
-  the Gray channel. Farther apart is slower. Need power.
+- Logistics Hub (Milestone 10, with local base storage on): links all storage in its Home Area
+  again. Needs power.
+- Delivery Drone Stations (Milestone 8, their own setting): an Input and an Output station carry
+  items between bases by drone, like a pipe without the pipe. Stations painted the same colour are
+  linked; unpainted ones share the Gray channel. Farther apart is slower. Need power.
 - Workshop Shed (Milestone 1): the game's cut Workshop Shed, buildable again.
 
 

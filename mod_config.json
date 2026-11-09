@@ -1,13 +1,14 @@
 {
   "mod_name": "HardcoreLogistics",
-  "version": "0.15.6",
+  "version": "0.15.7",
   "_version_note": "The released version (Nexus, the release zip's name, the runtime's load line in UE4SS.log). 0.15.6 is the first public release (2026-11-09); the changelog's 0.x entries before it are the development log.",
   "features": {
     "_note": "Each feature is one Off / On row in the game's playstyle settings (new-game Customize screen and the in-game Settings menu), stored per world in worlds.txt. The label is the row's text; every label starts \"Hardcore Logistics:\" so the rows read as the mod's (the user's wish, 0.15.6). Every table below belongs to exactly one feature, and applies just before a world loads. A live feature is a script that switches on and off at once, without a reload; it can also own tables (local storage owns the storage sizes), which after a switch in a loaded world follow on the next load. The static pak (build / install) ignores features and changes every table.",
-    "cargo":      { "label": "Hardcore Logistics: Mech Cargo", "tables": ["DT_Modules", "DT_CoreUpgrades"] },
-    "deliveries": { "label": "Hardcore Logistics: Deliveries", "tables": ["DT_Deliveries"] },
+    "cargo":      { "label": "Hardcore Logistics: Lower Mech Cargo", "tables": ["DT_Modules", "DT_CoreUpgrades"] },
+    "deliveries": { "label": "Hardcore Logistics: Bigger Material Deliveries", "tables": ["DT_Deliveries"] },
     "trampling":  { "label": "Hardcore Logistics: Crop Trampling", "tables": [], "live": true },
-    "storage":    { "label": "Hardcore Logistics: Local Storage", "tables": ["DT_StorageCapacities"], "live": true }
+    "storage":    { "label": "Hardcore Logistics: Local Base Storage", "tables": ["DT_StorageCapacities"], "live": true },
+    "drones":     { "label": "Hardcore Logistics: Delivery Drone Stations", "tables": [], "live": true }
   },
   "mode": {
     "_note": "The extra playstyle card on the new-game screen. Picking it applies the game's base preset (Challenge = the Challenging card) and switches every feature on for the new world; picking another card switches them off. The card uses the hidden Custom card's artwork.",
@@ -93,6 +94,8 @@
     "_cost_note": "Double the Watering Drone Station's (the game's own drone building from the same milestone, Milestone 8, Drones & Roads), as the user asked.",
     "_energy_note": "energy: each station's base cost on the Energy Meter, a DT_EnergyValues row by construct name; the playstyle scales it like every machine's (Balanced x1, Challenging x2). Storage Box II, the template, has no energy handler, so drones.lua gives each station the game's own one (BPC_EnergyHandler, added to the actor with AddComponentByClass as the world loads and when a station is first found; it reads its cost from that row and registers with the game state, and unregisters when the station is demolished). Drones only take off while the grid is Energized (the meter at 0 or above), as the hub only links then. 50 each: a linked pair costs what a hub costs (100); for scale, the Watering Drone Station uses 20 and the Diesel Generator II from the same milestone makes 250.",
     "energy_handler": "runtime",
+    "feature": "drones",
+    "_feature_note": "The stations belong to the feature 'drones', their own settings row, \"Delivery Drone Stations\" (the user's wish, 0.15.7: toggled from the settings, apart from local storage, working as before). Like the hubs with 'storage': the container ships both rows hidden (Features.Legacy) and outside Milestone 8's rewards, and before a world with the feature loads the runtime clears the flag and adds them to the rewards; worlds without it never see them. drones.lua also only flies drones and gives the stations their energy handlers while the feature is on, and takes the handlers back off when it is switched off, so placed stations are plain storage then. The Hardcore Logistics card turns it on with the rest.",
     "_model_note": "Own models since 0.15.1, version 2 in 0.15.2 after the user's concept art: art/drone_stations/build_station.py builds both in Blender (ROLE input or output) into art/drone_input_station and art/drone_output_station; art/export_model.py bakes them. The body is like Storage Box II's chest, as the user asked, because it is painted: framed 'paintable' panels (their baked paint mask lets the construct's paint colour, the link channel, show; Gray when unpainted) with the chest's fine diagonal ribbing (hl_pattern), the chest's thin orange stripe, bolts and latches. The logo screen on the right side is the user's pick from the concept: a cube with an arrow (up: sends, down: receives) between signal arcs. The storage template's focus panel has no icon line, so the logo is only on the building. The game's pipe rings and the interaction box are children of the StaticMesh component, so their places are in the model's own space (Unreal cm: Blender x, -y, z): each ring sits on the port socket, 75 cm out and 62 cm up, the input ring at the back (it faces the mesh's -Y), the output ring at the front; the interaction box covers the 1.9 x 1.6 x 1.85 m station (BoxExtent 32 x 30.5 x 32 scaled).",
     "buildings": [
       { "row": "DroneInputStation", "role": "input", "template": "StorageBox2", "model": "DroneInputStation",
